@@ -75,15 +75,16 @@ class Mastermind
             cpu_row = 0
             cpu_col = 0
             while cpu_row < 4
+                cpu_row_store = []
                 while cpu_col < 4
                     cpu_pick = rand(11)
-                    @board[cpu_row][cpu_col] = @colors[cpu_pick]
+                    cpu_row_store << @colors[cpu_pick]
                     cpu_col += 1
                 end
+                @board << cpu_row_store
                 cpu_col = 0
                 cpu_row += 1
             end
-            print_board
         end
     end
 
