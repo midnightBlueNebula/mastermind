@@ -8,12 +8,12 @@ class Mastermind
         end
         @board = []
         @round_left = 4
-        @guess_left = 12
+        @guess_left = 10
         @cpu_points = 0
         @player_points = 0
-        @colors = ["blue","cyan","purple","pink","red","yellow","green","torquoise","black","brown","white"]
+        @colors = ["blue","cyan","purple","pink","red","yellow","green","gray","black","brown","white"]
         @options = []
-        @taken = []
+        @pattern = []
 
         game_on
     end
@@ -21,28 +21,32 @@ class Mastermind
     private
 
     def start_board
-        if @player_turn
-            s_row = 0
-            s_col = 0
-            while s_row < 4
-                s_row_store = []
-                while s_col < 4
-                    s_row_store << s_row.to_s + s_col.to_s
-                    @options << s_row.to_s + s_col.to_s
-                    s_col += 1
-                end
-                @board << s_row_store
-                s_col = 0
-                s_row += 1
+        s_row = 0
+        s_col = 0
+        while s_row < 10
+            s_row_store = []
+            while s_col < 4
+                s_row_store << s_row.to_s + s_col.to_s
+                @options << s_row.to_s + s_col.to_s
+                s_col += 1
             end
+            @board << s_row_store
+            s_col = 0
+            s_row += 1
+        end
+
+        print_board
+        
+        if @player_turn
             
             puts "You are codemaker in this turn."
+            puts "To create your pattern..."
 
-            while @taken.length < 16
+            4.times do
                 puts "Pick a color:"
                 color_print_iter = 0
                 @colors.each do |c| 
-                    print "For #{c} enter: #{color_print_iter}. "
+                    puts "For #{c} enter: #{color_print_iter}. "
                     color_print_iter += 1
                 end
                 print "\n"
@@ -55,35 +59,15 @@ class Mastermind
                         color = color.to_i
                     end
                 end
-                puts "Where would you like to place #{@colors[color]}?"
-                print_board
-                place = gets.chomp
-                if @options.include?(place) == false || @taken.include?(place) == true
-                    while @options.include?(place) == false || @taken.include?(place) == true
-                        puts "Invalid option inputted. Please try again."
-                        place = gets.chomp
-                    end
-                end
-                p_choice = place.split("")
-                p_row_choice = p_choice[0].to_i
-                p_col_choice = p_choice[1].to_i
-                @board[p_row_choice][p_col_choice] = @colors[color]
-                @taken << place
+                @pattern << @colors[color]
             end
+            pattern_reveal
 
         else
-            cpu_row = 0
-            cpu_col = 0
-            while cpu_row < 4
-                cpu_row_store = []
-                while cpu_col < 4
-                    cpu_pick = rand(11)
-                    cpu_row_store << @colors[cpu_pick]
-                    cpu_col += 1
-                end
-                @board << cpu_row_store
-                cpu_col = 0
-                cpu_row += 1
+            puts "You're codebreaker in this turn."
+            4.times do
+                cpu_pattern_pick = rand(11)
+                @pattern << @colors[cpu_pattern_pick]
             end
         end
     end
@@ -91,10 +75,16 @@ class Mastermind
     def print_board
         p_row = 0
         p_col = 0
-        while p_row < 4
-            puts "---------------------------------------------"
+        while p_row < 10
+            puts "-----------------------------------------------------"
             while p_col < 4
-                print "|    #{@board[p_row][p_col]}    "
+                print "|"
+                print " " * (7-@board[p_row][p_col].length)
+                print @board[p_row][p_col]
+                print " " * (7-@board[p_row][p_col].length)
+                if @board[p_row][p_col].length > 2
+                    print " " * (@board[p_row][p_col].length-2)
+                end
                 p_col += 1
             end
             print "|"
@@ -102,22 +92,107 @@ class Mastermind
             p_col = 0
             p_row += 1
         end
-        puts "---------------------------------------------"
+        puts "-----------------------------------------------------"
     end
 
-    def show_board_to_player
-        if @player_turn
-            print_board
+
+    def pattern_reveal
+        puts @pattern
+    end
+
+    def guessing
+        if @player_turn == false
+            10.times do |r|
+                color_placed_right = 0
+                color_in_pattern = 0
+                color_guessed_wrong = 0
+
+                4.times do |c|
+                    puts "Pick a color to guess pattern"
+                    puts ""
+                    puts "Pick a color:"
+                    color_print_iter = 0
+                    @colors.each do |clr| 
+                        puts "For #{clr} enter: #{color_print_iter}. "
+                        color_print_iter += 1
+                    end
+                    print "\n"
+                    color = gets.chomp
+                    color = color.to_i
+                    if color.kind_of?(Integer) == false || color < 0 || color >= @colors.length
+                        while color.kind_of?(Integer) == false || color < 0 || color >= @colors.length
+                            puts "Invalid option inputted. Please try again."
+                            color = gets.chomp
+                            color = color.to_i
+                        end
+                    end
+                    @board[9-r][c] = @colors[color]
+                    print_board
+                end
+
+                4.times do |c|
+                    if @board[9-r][c] == @pattern[c]
+                        color_placed_right += 1
+                    elsif @pattern.include?(@board[9-r][c])
+                        color_in_pattern += 1
+                    else
+                        color_guessed_wrong += 1
+                    end
+                end
+
+                puts ""
+                print "#{color_placed_right} color"
+                print color_placed_right > 1 ? "s " : " "
+                print "placed right.\n"
+                print "#{color_in_pattern} color"
+                print color_in_pattern > 1 ? "s " : " "
+                print "exist in patern but placed wrong.\n"
+                print "#{color_guessed_wrong} color"
+                print color_guessed_wrong > 1 ? "s " : " "
+                print "guessed wrong.\n"
+                pattern_reveal
+            end
         else
-            puts "Computer's turn as codemaker can't show board now."
+            10.times do |r|
+                color_placed_right = 0
+                color_in_pattern = 0
+                color_guessed_wrong = 0
+                4.times do |c|
+                    cpu_clr_guess = rand(11)
+                    @board[9-r][c] = @colors[cpu_clr_guess]
+                end
+
+                4.times do |c|
+                    if @board[9-r][c] == @pattern[c]
+                        color_placed_right += 1
+                    elsif @pattern.include?(@board[9-r][c])
+                        color_in_pattern += 1
+                    else
+                        color_guessed_wrong += 1
+                    end
+                end
+
+                puts ""
+                print "#{color_placed_right} color"
+                print color_placed_right > 1 ? "s " : " "
+                print "placed right.\n"
+                print "#{color_in_pattern} color"
+                print color_in_pattern > 1 ? "s " : " "
+                print "exist in patern but placed wrong.\n"
+                print "#{color_guessed_wrong} color"
+                print color_guessed_wrong > 1 ? "s " : " "
+                print "guessed wrong.\n"
+                pattern_reveal
+            end
         end
     end
+
 
     def game_on
         while @round_left > 0
             start_board
-            @taken = []
-            show_board_to_player
+            guessing
+            @pattern = []
 
             while @guess_left > 0
 
