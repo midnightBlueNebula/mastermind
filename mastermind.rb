@@ -14,7 +14,7 @@ class Mastermind
         @colors = ["blue","cyan","purple","pink","red","yellow","green","gray","black","brown","white"]
         @pattern = []
         @not_guess_this = []
-        @not_guess_this_in_same_pos = []
+        @not_guess_this_in_same_pos = {}
         @not_move_this = []
         @prev_guess = []
         @prev_guess_right = nil
@@ -166,7 +166,7 @@ class Mastermind
                 color_in_pattern = 0
                 color_guessed_wrong = 0
                 
-                if @prev_guess_wrong > 0 || @prev_guess_wrong == nil
+                if @prev_guess_wrong == 4 || @prev_guess_wrong == nil
                     4.times do |c|
                         cpu_clr_guess = rand(11)
                         if @not_guess_this.include?(@colors[cpu_clr_guess]) == true
@@ -177,9 +177,32 @@ class Mastermind
                         @board[9-r][c] = @colors[cpu_clr_guess]
                         guessed_colors << @colors[cpu_clr_guess]
                     end
-
+                elsif   @prev_guess_wrong < 4 || @prev_guess_wrong >= 1
+                    @prev_guess.each do |p|
+                        iter_status = true
+                        if (@not_guess_this_in_same_pos.include?(p)==false || @not_move_this.include?(p)==false) && iter_status
+                            clr_inx = rand(11)
+                            while @colors[clr_inx] == p
+                                clr_inx = rand(11)
+                            end
+                            inx = @prev_guess.index(p)
+                            @prev_guess[inx] = @colors[clr_inx]
+                            itr = 0
+                            @prev_guess.each do |pr|
+                                @board[9-r][itr] = pr
+                                guessed_colors << pr
+                                itr += 1
+                            end
+                            iter_status = false
+                        end
+                    end
                 elsif @prev_guess_wrong_place == 4
+                    itr = 0
                     @prev_guess.shuffle
+                    while @prev_guess.any? { |p| @not_guess_this_in_same_pos[p] == @prev_guess.index(p) } && itr < 1000000
+                        @prev_guess.shuffle
+                        itr += 1
+                    end
                     it = 0
                     @prev_guess.each do |p|
                         @board[9-r][it] = p
@@ -203,7 +226,7 @@ class Mastermind
                 elsif color_in_pattern == 4
                     iter = 0
                     guessed_colors.each do |g|
-                        @not_guess_this_in_same_pos << [g,iter]
+                        @not_guess_this_in_same_pos[g] == iter
                         iter += 1
                     end
                 end
