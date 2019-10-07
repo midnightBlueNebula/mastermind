@@ -15,11 +15,12 @@ class Mastermind
         @pattern = []
         @not_guess_this = []
         @not_guess_this_in_same_pos = {}
-        @not_move_this = []
+        @not_move_this = {}
         @prev_guess = []
         @prev_guess_right = nil
         @prev_guess_wrong = nil
         @prev_guess_wrong_place = nil
+        @in_pattern = []
 
 
         game_on
@@ -109,6 +110,7 @@ class Mastermind
 
     def guessing
         if @player_turn == false
+            start_board
             10.times do |r|
                 color_placed_right = 0
                 color_in_pattern = 0
@@ -157,49 +159,74 @@ class Mastermind
                 print "#{color_guessed_wrong} color"
                 print color_guessed_wrong > 1 ? "s " : " "
                 print "guessed wrong.\n"
+                print_board
                 pattern_reveal
             end
         else
+            start_board
             10.times do |r|
                 guessed_colors = []
                 color_placed_right = 0
                 color_in_pattern = 0
                 color_guessed_wrong = 0
+
+                condition_matched = ""
+
+                def which_condition_matched(condition)
+                    condition_matched = condition
+                end
                 
                 if @prev_guess_wrong == 4 || @prev_guess_wrong == nil
                     4.times do |c|
                         cpu_clr_guess = rand(11)
-                        if @not_guess_this.include?(@colors[cpu_clr_guess]) == true
-                            while @not_guess_this.include?(@colors[cpu_clr_guess]) == true
+                        it = 0
+                        if @not_guess_this.include?(@colors[cpu_clr_guess]) == true 
+                            while @not_guess_this.include?(@colors[cpu_clr_guess]) == true && it < 10000
                                 cpu_clr_guess = rand(11)
+                                it += 1
                             end
                         end
                         @board[9-r][c] = @colors[cpu_clr_guess]
                         guessed_colors << @colors[cpu_clr_guess]
                     end
-                elsif   @prev_guess_wrong < 4 || @prev_guess_wrong >= 1
+                    which_condition_matched("@prev_guess_wrong == 4 || @prev_guess_wrong == nil")
+                elsif @prev_guess_wrong < 4 && @prev_guess_wrong >= 1
                     @prev_guess.each do |p|
                         iter_status = true
-                        if (@not_guess_this_in_same_pos.include?(p)==false || @not_move_this.include?(p)==false) && iter_status
+                        if @not_move_this.include?(p)==false && iter_status
                             clr_inx = rand(11)
                             while @colors[clr_inx] == p
                                 clr_inx = rand(11)
+                                p_new = @colors[clr_inx]
+                                if @not_guess_this_in_same_pos[p_new] == @prev_guess.index(p_new)
+                                    itr_i = 0
+                                    while @colors[clr_inx] == p && @colors[clr_inx] == p_new && itr_i < 10000
+                                        clr_inx = rand(11)
+                                        itr_i += 10000
+                                    end
+                                end
                             end
                             inx = @prev_guess.index(p)
-                            @prev_guess[inx] = @colors[clr_inx]
                             itr = 0
                             @prev_guess.each do |pr|
-                                @board[9-r][itr] = pr
-                                guessed_colors << pr
-                                itr += 1
+                                if pr == @prev_guess[inx]
+                                    @board[9-r][itr] = @colors[clr_inx]
+                                    guessed_colors << @colors[clr_inx]
+                                    itr += 1
+                                else
+                                    @board[9-r][itr] = pr
+                                    guessed_colors << pr
+                                    itr += 1
+                                end
                             end
                             iter_status = false
                         end
+                        which_condition_matched("@prev_guess_wrong < 4 && @prev_guess_wrong >= 1")
                     end
                 elsif @prev_guess_wrong_place == 4
                     itr = 0
                     @prev_guess.shuffle
-                    while @prev_guess.any? { |p| @not_guess_this_in_same_pos[p] == @prev_guess.index(p) } && itr < 1000000
+                    while @prev_guess.any? { |p| @not_guess_this_in_same_pos[p] == @prev_guess.index(p) } && itr < 10000
                         @prev_guess.shuffle
                         itr += 1
                     end
@@ -209,6 +236,21 @@ class Mastermind
                         guessed_colors << p
                         it += 1
                     end
+                    which_condition_matched("@prev_guess_wrong_place == 4")
+                else
+                    4.times do |c|
+                        cpu_clr_guess = rand(11)
+                        if @not_guess_this.include?(@colors[cpu_clr_guess]) == true
+                            itr = 0
+                            while @not_guess_this.include?(@colors[cpu_clr_guess]) == true && itr < 10000
+                                cpu_clr_guess = rand(11)
+                                itr += 1
+                            end
+                        end
+                        @board[9-r][c] = @colors[cpu_clr_guess]
+                        guessed_colors << @colors[cpu_clr_guess]
+                    end
+                    which_condition_matched("else")
                 end
 
                 4.times do |c|
@@ -229,6 +271,50 @@ class Mastermind
                         @not_guess_this_in_same_pos[g] == iter
                         iter += 1
                     end
+                elsif color_guessed_wrong == 0
+                    guessed_colors.each do |g|
+                        if @not_guess_this.include?(g)
+                            @not_guess_this.delete(g)
+                        end
+                    end
+                end
+
+                if @prev_guess_wrong != nil && @prev_guess_wrong_place != nil && @prev_guess_right != nil
+                    if condition_matched == "@prev_guess_wrong < 4 && @prev_guess_wrong >= 1"
+                        if color_guessed_wrong >= @prev_guess_wrong
+                            guessed_colors.each do |e|
+                                if @prev_guess.include?(e) == false
+                                    @not_guess_this << e
+                                end
+                            end
+                            @prev_guess.each do |e|
+                                if @in_pattern.include?(e) == false
+                                    @in_pattern << e
+                                end
+                                if @not_guess_this.include?(e)
+                                    @not_guess_this.delete(e)
+                                end
+                            end
+                        elsif color_in_pattern >= @prev_guess_wrong_place
+                            guessed_colors.each do |e|
+                                if @prev_guess.include?(e) == false && @in_pattern.include?(e) == false
+                                    inx = guessed_colors.index(e)
+                                    @not_guess_this_in_same_pos[e] = inx
+                                    @in_pattern << e
+                                end
+                            end
+                        elsif color_placed_right > @prev_guess_right
+                            guessed_colors.each do |e|
+                                if @prev_guess.include?(e) == false
+                                    inx = guessed_colors.index(e)
+                                    @not_move_this[e] = inx
+                                    if @in_pattern.include?(e) == false
+                                        @in_pattern << e
+                                    end
+                                end
+                            end
+                        end
+                    end
                 end
 
                 @prev_guess_right = color_placed_right
@@ -248,6 +334,7 @@ class Mastermind
                 print "#{color_guessed_wrong} color"
                 print color_guessed_wrong > 1 ? "s " : " "
                 print "guessed wrong.\n"
+                print_board
                 pattern_reveal
             end
         end
@@ -256,7 +343,6 @@ class Mastermind
 
     def game_on
         while @round_left > 0
-            start_board
             guessing
             @pattern = []
             if @player_turn 
